@@ -69,3 +69,6 @@ fastlane/test_output
 
 # Xcode
 *.xcodeproj/**
+
+# libsodium static library
+libsodium*/**
