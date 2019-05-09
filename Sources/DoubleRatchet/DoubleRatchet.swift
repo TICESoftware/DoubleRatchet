@@ -14,7 +14,7 @@ public class DoubleRatchet {
     private var sendingChain: MessageChain
     private var receivingChain: MessageChain
 
-    private var sentMessageNumber: Int
+    private var sendMessageNumber: Int
     private var receivedMessageNumber: Int
     private var previousSendingChainLength: Int
     private var skippedMessageKeys: [MessageIndex: MessageKey]
@@ -43,7 +43,7 @@ public class DoubleRatchet {
         self.sendingChain = MessageChain()
         self.receivingChain = MessageChain()
 
-        self.sentMessageNumber = 0
+        self.sendMessageNumber = 0
         self.receivedMessageNumber = 0
         self.previousSendingChainLength = 0
         self.skippedMessageKeys = [:]
@@ -55,8 +55,8 @@ public class DoubleRatchet {
 
     func encrypt(message: Bytes) throws -> Message {
         let messageKey = try sendingChain.nextMessageKey()
-        let header = Header(publicKey: rootChain.keyPair.publicKey, numberOfMessagesInPreviousSendingChain: previousSendingChainLength, messageNumber: sentMessageNumber)
-        sentMessageNumber += 1
+        let header = Header(publicKey: rootChain.keyPair.publicKey, numberOfMessagesInPreviousSendingChain: previousSendingChainLength, messageNumber: sendMessageNumber)
+        sendMessageNumber += 1
 
         let headerData = try header.bytes()
         guard let cipher: Bytes = sodium.aead.xchacha20poly1305ietf.encrypt(message: message, secretKey: messageKey, additionalData: headerData) else {
@@ -76,7 +76,7 @@ public class DoubleRatchet {
             try doubleRatchetStep(publicKey: message.header.publicKey)
         }
 
-        try skipReceivedMessages(until: message.header.messageNumber, remotePublicKey: remotePublicKey)
+        try skipReceivedMessages(until: message.header.messageNumber, remotePublicKey: message.header.publicKey)
 
         let messageKey = try receivingChain.nextMessageKey()
         let plaintext = try decrypt(message: message, key: messageKey)
@@ -115,9 +115,9 @@ public class DoubleRatchet {
     }
 
     private func doubleRatchetStep(publicKey: KeyExchange.PublicKey) throws {
-        previousSendingChainLength = receivedMessageNumber
+        previousSendingChainLength = sendMessageNumber
+        sendMessageNumber = 0
         receivedMessageNumber = 0
-        sentMessageNumber = 0
 
         rootChain.remotePublicKey = publicKey
 
