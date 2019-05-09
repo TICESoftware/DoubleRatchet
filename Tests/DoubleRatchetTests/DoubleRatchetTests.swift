@@ -129,5 +129,9 @@ final class DoubleRatchetTests: XCTestCase {
 
     static var allTests = [
         ("testRatchetSteps", testRatchetSteps),
+        ("testUnidirectionalConversation", testUnidirectionalConversation),
+        ("testLostMessages", testLostMessages),
+        ("testLostMessagesAndRatchetStep", testLostMessagesAndRatchetStep),
+        ("testExceedMaxSkipMessages", testExceedMaxSkipMessages),
     ]
 }
