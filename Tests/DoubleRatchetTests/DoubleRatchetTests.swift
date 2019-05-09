@@ -18,32 +18,29 @@ final class DoubleRatchetTests: XCTestCase {
         alice = try! DoubleRatchet(remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, info: info)
     }
 
-    func testConversationWithoutRatchetStep() {
+    func testRatchetSteps() {
         do {
-            for _ in 0...1 {
-                let message = "aliceToBob".bytes
-                let encryptedMessage = try alice.encrypt(message: message)
-                let decryptedMessage = try bob.decrypt(message: encryptedMessage)
-                XCTAssertEqual(message, decryptedMessage)
+            let bobPublicKeySnapshot = bob.publicKey
 
-                for _ in 0...1 {
-                    let message = "bobToAlice".bytes
-                    let encryptedMessage = try bob.encrypt(message: message)
-                    let decryptedMessage = try alice.decrypt(message: encryptedMessage)
-                    XCTAssertEqual(message, decryptedMessage)
-                }
-            }
+            let message = "aliceToBob".bytes
+            let encryptedMessage = try alice.encrypt(message: message)
+            let decryptedMessage = try bob.decrypt(message: encryptedMessage)
+            XCTAssertEqual(message, decryptedMessage)
+            XCTAssertNotEqual(bob.publicKey, bobPublicKeySnapshot)
+
+            let alicePublicKeySnapshot = alice.publicKey
+
+            let response = "bobToAlice".bytes
+            let encryptedResponse = try bob.encrypt(message: response)
+            let decryptedResponse = try alice.decrypt(message: encryptedResponse)
+            XCTAssertEqual(response, decryptedResponse)
+            XCTAssertNotEqual(alice.publicKey, alicePublicKeySnapshot)
         } catch {
             XCTFail(error.localizedDescription)
         }
     }
 
-    func testConversationWithRatchetStep() {
-        XCTFail("Not implemented yet.")
-    }
-
     static var allTests = [
-        ("testConversationWithoutRatchetStep", testConversationWithoutRatchetStep),
-        ("testConversationWithRatchetStep", testConversationWithRatchetStep),
+        ("testRatchetSteps", testRatchetSteps),
     ]
 }

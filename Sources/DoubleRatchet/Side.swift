@@ -1,10 +1,10 @@
 import Sodium
 
-enum Side: String, Codable {
-    case alice
-    case bob
+enum Side {
+    case sending
+    case receiving
 
     var kxSide: KeyExchange.Side {
-        return self == .alice ? .CLIENT : .SERVER
+        return self == .sending ? .SERVER : .CLIENT
     }
 }

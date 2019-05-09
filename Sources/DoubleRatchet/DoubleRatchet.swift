@@ -39,7 +39,7 @@ public class DoubleRatchet {
             throw DRError.dhKeyGenerationFailed
         }
 
-        self.rootChain = RootChain(keyPair: keyPair, remotePublicKey: remotePublicKey, rootKey: sharedSecret, info: info, side: remotePublicKey != nil ? .alice : .bob)
+        self.rootChain = RootChain(keyPair: keyPair, remotePublicKey: remotePublicKey, rootKey: sharedSecret, info: info)
         self.sendingChain = MessageChain()
         self.receivingChain = MessageChain()
 
@@ -49,7 +49,7 @@ public class DoubleRatchet {
         self.skippedMessageKeys = [:]
 
         if remotePublicKey != nil {
-            sendingChain.chainKey = try self.rootChain.ratchetStep()
+            sendingChain.chainKey = try self.rootChain.ratchetStep(side: .sending)
         }
     }
 
@@ -121,13 +121,13 @@ public class DoubleRatchet {
 
         rootChain.remotePublicKey = publicKey
 
-        receivingChain.chainKey = try rootChain.ratchetStep()
+        receivingChain.chainKey = try rootChain.ratchetStep(side: .receiving)
 
         guard let newKeyPair = sodium.keyExchange.keyPair() else {
             throw DRError.dhKeyGenerationFailed
         }
         rootChain.keyPair = newKeyPair
 
-        sendingChain.chainKey = try rootChain.ratchetStep()
+        sendingChain.chainKey = try rootChain.ratchetStep(side: .sending)
     }
 }
