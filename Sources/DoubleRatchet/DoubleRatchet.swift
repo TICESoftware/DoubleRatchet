@@ -1,51 +1,61 @@
 import Sodium
 import HKDF
 
+typealias KeyPair = KeyExchange.KeyPair
+typealias PublicKey = KeyExchange.PublicKey
+typealias MessageKey = Bytes
+
 public class DoubleRatchet {
-    let sodium = Sodium()
+    private let sodium = Sodium()
 
     let maxSkip: Int
-    let info: String
 
-    var rootChain: RootChain
-    var sendingChain: MessageChain
-    var receivingChain: MessageChain
+    private var rootChain: RootChain
+    private var sendingChain: MessageChain
+    private var receivingChain: MessageChain
 
-    var sentMessageNumber: Int
-    var receivedMessageNumber: Int
-    var previousSendingChainLength: Int
-    var skippedMessageKeys: [MessageIndex: Bytes]
+    private var sentMessageNumber: Int
+    private var receivedMessageNumber: Int
+    private var previousSendingChainLength: Int
+    private var skippedMessageKeys: [MessageIndex: MessageKey]
+
+    var publicKey: PublicKey {
+        return rootChain.keyPair.publicKey
+    }
 
     struct MessageIndex: Hashable {
-        let publicKey: KeyExchange.PublicKey
+        let publicKey: PublicKey
         let messageNumber: Int
     }
 
-    init(remotePublicKey: KeyExchange.PublicKey?, sharedSecret: Bytes, maxSkip: Int, info: String) throws {
+    init(remotePublicKey: PublicKey?, sharedSecret: Bytes, maxSkip: Int, info: String) throws {
+        guard sharedSecret.count == 32 else {
+            throw DRError.invalidSharedSecret
+        }
+
         self.maxSkip = maxSkip
-        self.info = info
 
         guard let keyPair = sodium.keyExchange.keyPair() else {
             throw DRError.dhKeyGenerationFailed
         }
 
-        self.rootChain = RootChain(dhRatchetKeyPair: keyPair, rootKey: sharedSecret)
-        self.sendingChain = MessageChain(chainKey: [])
-        self.receivingChain = MessageChain(chainKey: [])
+        self.rootChain = RootChain(keyPair: keyPair, remotePublicKey: remotePublicKey, rootKey: sharedSecret, info: info, side: remotePublicKey != nil ? .alice : .bob)
+        self.sendingChain = MessageChain()
+        self.receivingChain = MessageChain()
 
         self.sentMessageNumber = 0
         self.receivedMessageNumber = 0
         self.previousSendingChainLength = 0
         self.skippedMessageKeys = [:]
 
-        if let remotePublicKey = remotePublicKey {
-            try ratchetStepSendingSide(publicKey: remotePublicKey)
+        if remotePublicKey != nil {
+            sendingChain.chainKey = try self.rootChain.ratchetStep()
         }
     }
 
     func encrypt(message: Bytes) throws -> Message {
         let messageKey = try sendingChain.nextMessageKey()
-        let header = Header(publicKey: rootChain.currentPublicKey, numberOfMessagesInPreviousSendingChain: previousSendingChainLength, messageNumber: sentMessageNumber)
+        let header = Header(publicKey: rootChain.keyPair.publicKey, numberOfMessagesInPreviousSendingChain: previousSendingChainLength, messageNumber: sentMessageNumber)
         sentMessageNumber += 1
 
         let headerData = try header.bytes()
@@ -56,18 +66,17 @@ public class DoubleRatchet {
     }
 
     func decrypt(message: Message) throws -> Bytes {
-        // Check for skipped messages
         if let plaintext = try decryptSkippedMessage(message) {
             return plaintext
         }
 
-        // Check if ratchet step should be performed
-        if message.header.publicKey != rootChain.currentPublicKey {
-            try skipReceivedMessages(until: message.header.numberOfMessagesInPreviousSendingChain)
+        let remotePublicKey = rootChain.remotePublicKey ?? message.header.publicKey
+        if message.header.publicKey != rootChain.remotePublicKey {
+            try skipReceivedMessages(until: message.header.numberOfMessagesInPreviousSendingChain, remotePublicKey: remotePublicKey)
             try doubleRatchetStep(publicKey: message.header.publicKey)
         }
 
-        try skipReceivedMessages(until: message.header.messageNumber)
+        try skipReceivedMessages(until: message.header.messageNumber, remotePublicKey: remotePublicKey)
 
         let messageKey = try receivingChain.nextMessageKey()
         let plaintext = try decrypt(message: message, key: messageKey)
@@ -84,7 +93,7 @@ public class DoubleRatchet {
         return plaintext
     }
 
-    private func decrypt(message: Message, key: Bytes) throws -> Bytes {
+    private func decrypt(message: Message, key: MessageKey) throws -> Bytes {
         let headerData = try message.header.bytes()
         guard let plaintext = sodium.aead.xchacha20poly1305ietf.decrypt(nonceAndAuthenticatedCipherText: message.cipher, secretKey: key, additionalData: headerData) else {
             throw DRError.decryptionFailed
@@ -92,29 +101,17 @@ public class DoubleRatchet {
         return plaintext
     }
 
-    private func skipReceivedMessages(until nextMessageNumber: Int) throws {
+    private func skipReceivedMessages(until nextMessageNumber: Int, remotePublicKey: PublicKey) throws {
         guard nextMessageNumber - receivedMessageNumber <= maxSkip else {
             throw DRError.exceedMaxSkip
         }
 
         while receivedMessageNumber < nextMessageNumber {
             let skippedMessageKey = try receivingChain.nextMessageKey()
-            let skippedMessageIndex = MessageIndex(publicKey: rootChain.currentPublicKey, messageNumber: receivedMessageNumber)
+            let skippedMessageIndex = MessageIndex(publicKey: remotePublicKey, messageNumber: receivedMessageNumber)
             skippedMessageKeys[skippedMessageIndex] = skippedMessageKey
             receivedMessageNumber += 1
         }
-    }
-
-    private func ratchetStepSendingSide(publicKey: KeyExchange.PublicKey) throws {
-        let (newRootKey, newSendingChainKey) = try deriveChainKeys(rootKey: rootChain.rootKey, info: info, keyPair: rootChain.dhRatchetKeyPair, remotePublicKey: publicKey)
-        rootChain.rootKey = newRootKey
-        sendingChain.chainKey = newSendingChainKey
-    }
-
-    private func ratchetStepReceivingSide(publicKey: KeyExchange.PublicKey) throws {
-        let (newRootKey, newReceivingChainKey) = try deriveChainKeys(rootKey: rootChain.rootKey, info: info, keyPair: rootChain.dhRatchetKeyPair, remotePublicKey: publicKey)
-        rootChain.rootKey = newRootKey
-        receivingChain.chainKey = newReceivingChainKey
     }
 
     private func doubleRatchetStep(publicKey: KeyExchange.PublicKey) throws {
@@ -122,38 +119,15 @@ public class DoubleRatchet {
         receivedMessageNumber = 0
         sentMessageNumber = 0
 
-        try ratchetStepReceivingSide(publicKey: publicKey)
+        rootChain.remotePublicKey = publicKey
 
-        let newKeyPair = try generateDHKeyPair()
-        rootChain.dhRatchetKeyPair = newKeyPair
+        receivingChain.chainKey = try rootChain.ratchetStep()
 
-        try ratchetStepSendingSide(publicKey: publicKey)
-    }
-
-    // GENERATE_DH()
-    private func generateDHKeyPair() throws -> KeyExchange.KeyPair {
-        guard let keyPair = sodium.keyExchange.keyPair() else {
+        guard let newKeyPair = sodium.keyExchange.keyPair() else {
             throw DRError.dhKeyGenerationFailed
         }
-        return keyPair
-    }
+        rootChain.keyPair = newKeyPair
 
-    // DH(dh_pair, dh_pub)
-    private func dh(keyPair: KeyExchange.KeyPair, publicKey: KeyExchange.PublicKey) throws -> Bytes {
-        guard let dh = sodium.keyExchange.sessionKeyPair(publicKey: keyPair.publicKey, secretKey: keyPair.secretKey, otherPublicKey: publicKey, side: .CLIENT) else {
-            throw DRError.dhKeyExchangeFailed
-        }
-        return dh.rx
-    }
-
-    // KDF_RK(rk, dh_out)
-    private func deriveFromRootKDF(rootKey: Bytes, dhOut: Bytes, info: String) throws -> (rootKey: Bytes, chainKey: Bytes) {
-        let derivedKey = try deriveHKDFKey(ikm: dhOut, salt: rootKey, info: info, L: 64)
-        return (rootKey: Bytes(derivedKey[..<32]), chainKey: Bytes(derivedKey[32...]))
-    }
-
-    private func deriveChainKeys(rootKey: Bytes, info: String, keyPair: KeyExchange.KeyPair, remotePublicKey: KeyExchange.PublicKey) throws -> (rootKey: Bytes, chainKey: Bytes) {
-        let dhResult = try dh(keyPair: keyPair, publicKey: remotePublicKey)
-        return try deriveFromRootKDF(rootKey: rootKey, dhOut: dhResult, info: info)
+        sendingChain.chainKey = try rootChain.ratchetStep()
     }
 }
