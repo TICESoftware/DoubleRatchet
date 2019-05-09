@@ -9,6 +9,7 @@ public class DoubleRatchet {
     private let sodium = Sodium()
 
     let maxSkip: Int
+    let maxCache: Int
 
     private var rootChain: RootChain
     private var sendingChain: MessageChain
@@ -18,6 +19,7 @@ public class DoubleRatchet {
     private var receivedMessageNumber: Int
     private var previousSendingChainLength: Int
     private var skippedMessageKeys: [MessageIndex: MessageKey]
+    private var messageKeyCache: [MessageIndex]
 
     var publicKey: PublicKey {
         return rootChain.keyPair.publicKey
@@ -28,12 +30,13 @@ public class DoubleRatchet {
         let messageNumber: Int
     }
 
-    init(remotePublicKey: PublicKey?, sharedSecret: Bytes, maxSkip: Int, info: String) throws {
+    init(remotePublicKey: PublicKey?, sharedSecret: Bytes, maxSkip: Int, maxCache: Int, info: String) throws {
         guard sharedSecret.count == 32 else {
             throw DRError.invalidSharedSecret
         }
 
         self.maxSkip = maxSkip
+        self.maxCache = maxCache
 
         guard let keyPair = sodium.keyExchange.keyPair() else {
             throw DRError.dhKeyGenerationFailed
@@ -47,6 +50,7 @@ public class DoubleRatchet {
         self.receivedMessageNumber = 0
         self.previousSendingChainLength = 0
         self.skippedMessageKeys = [:]
+        self.messageKeyCache = []
 
         if remotePublicKey != nil {
             sendingChain.chainKey = try self.rootChain.ratchetStep(side: .sending)
@@ -89,7 +93,10 @@ public class DoubleRatchet {
         guard let messageKey = skippedMessageKeys[skippedMessageIndex] else { return nil }
 
         let plaintext = try decrypt(message: message, key: messageKey)
+
         skippedMessageKeys[skippedMessageIndex] = nil
+        messageKeyCache.removeAll { $0 == skippedMessageIndex }
+
         return plaintext
     }
 
@@ -109,7 +116,11 @@ public class DoubleRatchet {
         while receivedMessageNumber < nextMessageNumber {
             let skippedMessageKey = try receivingChain.nextMessageKey()
             let skippedMessageIndex = MessageIndex(publicKey: remotePublicKey, messageNumber: receivedMessageNumber)
+
             skippedMessageKeys[skippedMessageIndex] = skippedMessageKey
+            messageKeyCache.append(skippedMessageIndex)
+            while messageKeyCache.count > maxCache { messageKeyCache.removeLast() }
+            
             receivedMessageNumber += 1
         }
     }

@@ -14,8 +14,8 @@ final class DoubleRatchetTests: XCTestCase {
     override func setUp() {
         super.setUp()
 
-        bob = try! DoubleRatchet(remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 20, info: info)
-        alice = try! DoubleRatchet(remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, info: info)
+        bob = try! DoubleRatchet(remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 20, info: info)
+        alice = try! DoubleRatchet(remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 20, info: info)
     }
 
     func testRatchetSteps() {
@@ -109,10 +109,10 @@ final class DoubleRatchetTests: XCTestCase {
 
     func testExceedMaxSkipMessages() {
         do {
-            bob = try! DoubleRatchet(remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 2, info: info)
-            alice = try DoubleRatchet(remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 2, info: info)
+            bob = try! DoubleRatchet(remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 1, maxCache: 2, info: info)
+            alice = try DoubleRatchet(remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 1, maxCache: 2, info: info)
 
-            for _ in 0...2 {
+            for _ in 0...1 {
                 _ = try alice.encrypt(message: "Message".bytes)
             }
 
@@ -127,11 +127,44 @@ final class DoubleRatchetTests: XCTestCase {
         }
     }
 
+    func testExceedMaxCacheMessageKeys() {
+        bob = try! DoubleRatchet(remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 1, info: info)
+        alice = try! DoubleRatchet(remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 1, info: info)
+
+        var delayedMessages: [Message] = []
+
+        do {
+            for i in 0...2 {
+                let message = "aliceToBob\(i)"
+                let encryptedMessage = try alice.encrypt(message: message.bytes)
+                delayedMessages.append(encryptedMessage)
+            }
+
+            for i in (0...1).reversed() {
+                let plaintext = try bob.decrypt(message: delayedMessages[i])
+                XCTAssertEqual(plaintext, "aliceToBob\(i)".bytes)
+            }
+        } catch {
+            XCTFail()
+        }
+
+        do {
+            _ = try bob.decrypt(message: delayedMessages[0])
+            XCTFail()
+        } catch {
+            guard case DRError.decryptionFailed = error else {
+                XCTFail()
+                return
+            }
+        }
+    }
+
     static var allTests = [
         ("testRatchetSteps", testRatchetSteps),
         ("testUnidirectionalConversation", testUnidirectionalConversation),
         ("testLostMessages", testLostMessages),
         ("testLostMessagesAndRatchetStep", testLostMessagesAndRatchetStep),
         ("testExceedMaxSkipMessages", testExceedMaxSkipMessages),
+        ("testExceedMaxCacheMessageKeys", testExceedMaxCacheMessageKeys),
     ]
 }
