@@ -1,3 +1,7 @@
+//
+//  Copyright © 2019 Anbion. All rights reserved.
+//
+
 import XCTest
 import Sodium
 @testable import DoubleRatchet
@@ -23,7 +27,7 @@ final class DoubleRatchetTests: XCTestCase {
             let bobPublicKeySnapshot = bob.publicKey
 
             let message = "aliceToBob".bytes
-            let encryptedMessage = try alice.encrypt(message: message)
+            let encryptedMessage = try alice.encrypt(plaintext: message)
             let decryptedMessage = try bob.decrypt(message: encryptedMessage)
             XCTAssertEqual(message, decryptedMessage)
             XCTAssertNotEqual(bob.publicKey, bobPublicKeySnapshot)
@@ -31,7 +35,7 @@ final class DoubleRatchetTests: XCTestCase {
             let alicePublicKeySnapshot = alice.publicKey
 
             let response = "bobToAlice".bytes
-            let encryptedResponse = try bob.encrypt(message: response)
+            let encryptedResponse = try bob.encrypt(plaintext: response)
             let decryptedResponse = try alice.decrypt(message: encryptedResponse)
             XCTAssertEqual(response, decryptedResponse)
             XCTAssertNotEqual(alice.publicKey, alicePublicKeySnapshot)
@@ -46,7 +50,7 @@ final class DoubleRatchetTests: XCTestCase {
 
             for _ in 0...1 {
                 let message = "aliceToBob".bytes
-                let encryptedMessage = try alice.encrypt(message: message)
+                let encryptedMessage = try alice.encrypt(plaintext: message)
                 let decryptedMessage = try bob.decrypt(message: encryptedMessage)
                 XCTAssertEqual(message, decryptedMessage)
             }
@@ -62,7 +66,7 @@ final class DoubleRatchetTests: XCTestCase {
             var delayedMessages: [Message] = []
             for i in 0...2 {
                 let message = "aliceToBob\(i)".bytes
-                let encryptedMessage = try alice.encrypt(message: message)
+                let encryptedMessage = try alice.encrypt(plaintext: message)
                 delayedMessages.append(encryptedMessage)
             }
 
@@ -78,23 +82,23 @@ final class DoubleRatchetTests: XCTestCase {
     func testLostMessagesAndRatchetStep() {
         do {
             let message = "aliceToBob".bytes
-            let encryptedMessage = try alice.encrypt(message: message)
+            let encryptedMessage = try alice.encrypt(plaintext: message)
             _ = try bob.decrypt(message: encryptedMessage)
 
             var delayedMessages: [Message] = []
             for i in 0...1 {
                 if i == 1 {
                     // Ratchet step
-                    let message = try bob.encrypt(message: message)
+                    let message = try bob.encrypt(plaintext: message)
                     _ = try alice.decrypt(message: message)
                 }
                 let message = "aliceToBob\(i)".bytes
-                let encryptedMessage = try alice.encrypt(message: message)
+                let encryptedMessage = try alice.encrypt(plaintext: message)
                 delayedMessages.append(encryptedMessage)
             }
 
             let successfulMessage = "aliceToBob2".bytes
-            let successfulEncryptedRatchetMessage = try alice.encrypt(message: successfulMessage)
+            let successfulEncryptedRatchetMessage = try alice.encrypt(plaintext: successfulMessage)
             let successfulPlaintext = try bob.decrypt(message: successfulEncryptedRatchetMessage)
             XCTAssertEqual(successfulPlaintext, successfulMessage)
 
@@ -113,10 +117,10 @@ final class DoubleRatchetTests: XCTestCase {
             alice = try DoubleRatchet(remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 1, maxCache: 2, info: info)
 
             for _ in 0...1 {
-                _ = try alice.encrypt(message: "Message".bytes)
+                _ = try alice.encrypt(plaintext: "Message".bytes)
             }
 
-            let encryptedMessage = try alice.encrypt(message: "Message".bytes)
+            let encryptedMessage = try alice.encrypt(plaintext: "Message".bytes)
             _ = try bob.decrypt(message: encryptedMessage)
             XCTFail()
         } catch {
@@ -136,7 +140,7 @@ final class DoubleRatchetTests: XCTestCase {
         do {
             for i in 0...2 {
                 let message = "aliceToBob\(i)"
-                let encryptedMessage = try alice.encrypt(message: message.bytes)
+                let encryptedMessage = try alice.encrypt(plaintext: message.bytes)
                 delayedMessages.append(encryptedMessage)
             }
 

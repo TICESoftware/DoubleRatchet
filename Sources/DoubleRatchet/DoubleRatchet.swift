@@ -1,3 +1,7 @@
+//
+//  Copyright © 2019 Anbion. All rights reserved.
+//
+
 import Sodium
 import HKDF
 
@@ -57,13 +61,13 @@ public class DoubleRatchet {
         }
     }
 
-    func encrypt(message: Bytes) throws -> Message {
+    func encrypt(plaintext: Bytes) throws -> Message {
         let messageKey = try sendingChain.nextMessageKey()
         let header = Header(publicKey: rootChain.keyPair.publicKey, numberOfMessagesInPreviousSendingChain: previousSendingChainLength, messageNumber: sendMessageNumber)
         sendMessageNumber += 1
 
         let headerData = try header.bytes()
-        guard let cipher: Bytes = sodium.aead.xchacha20poly1305ietf.encrypt(message: message, secretKey: messageKey, additionalData: headerData) else {
+        guard let cipher: Bytes = sodium.aead.xchacha20poly1305ietf.encrypt(message: plaintext, secretKey: messageKey, additionalData: headerData) else {
             throw DRError.encryptionFailed
         }
         return Message(header: header, cipher: cipher)

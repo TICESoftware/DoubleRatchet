@@ -1,5 +1,8 @@
 import Sodium
 import HKDF
+//
+//  Copyright © 2019 Anbion. All rights reserved.
+//
 
 typealias RootKey = Bytes
 

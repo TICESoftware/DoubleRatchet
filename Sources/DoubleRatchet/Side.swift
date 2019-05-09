@@ -1,3 +1,7 @@
+//
+//  Copyright © 2019 Anbion. All rights reserved.
+//
+
 import Sodium
 
 enum Side {
