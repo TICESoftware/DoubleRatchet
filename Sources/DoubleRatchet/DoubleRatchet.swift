@@ -34,7 +34,7 @@ public class DoubleRatchet {
         let messageNumber: Int
     }
 
-    init(remotePublicKey: PublicKey?, sharedSecret: Bytes, maxSkip: Int, maxCache: Int, info: String) throws {
+    init(keyPair: KeyPair?, remotePublicKey: PublicKey?, sharedSecret: Bytes, maxSkip: Int, maxCache: Int, info: String) throws {
         guard sharedSecret.count == 32 else {
             throw DRError.invalidSharedSecret
         }
@@ -42,7 +42,7 @@ public class DoubleRatchet {
         self.maxSkip = maxSkip
         self.maxCache = maxCache
 
-        guard let keyPair = sodium.keyExchange.keyPair() else {
+        guard let keyPair = keyPair ?? Sodium().keyExchange.keyPair() else {
             throw DRError.dhKeyGenerationFailed
         }
 

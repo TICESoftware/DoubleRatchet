@@ -18,8 +18,8 @@ final class DoubleRatchetTests: XCTestCase {
     override func setUp() {
         super.setUp()
 
-        bob = try! DoubleRatchet(remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 20, info: info)
-        alice = try! DoubleRatchet(remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 20, info: info)
+        bob = try! DoubleRatchet(keyPair: nil, remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 20, info: info)
+        alice = try! DoubleRatchet(keyPair: nil, remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 20, info: info)
     }
 
     func testRatchetSteps() {
@@ -113,8 +113,8 @@ final class DoubleRatchetTests: XCTestCase {
 
     func testExceedMaxSkipMessages() {
         do {
-            bob = try! DoubleRatchet(remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 1, maxCache: 2, info: info)
-            alice = try DoubleRatchet(remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 1, maxCache: 2, info: info)
+            bob = try! DoubleRatchet(keyPair: nil, remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 1, maxCache: 2, info: info)
+            alice = try DoubleRatchet(keyPair: nil, remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 1, maxCache: 2, info: info)
 
             for _ in 0...1 {
                 _ = try alice.encrypt(plaintext: "Message".bytes)
@@ -132,8 +132,8 @@ final class DoubleRatchetTests: XCTestCase {
     }
 
     func testExceedMaxCacheMessageKeys() {
-        bob = try! DoubleRatchet(remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 1, info: info)
-        alice = try! DoubleRatchet(remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 1, info: info)
+        bob = try! DoubleRatchet(keyPair: nil, remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 1, info: info)
+        alice = try! DoubleRatchet(keyPair: nil, remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 1, info: info)
 
         var delayedMessages: [Message] = []
 
