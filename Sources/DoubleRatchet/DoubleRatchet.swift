@@ -61,20 +61,24 @@ public class DoubleRatchet {
         }
     }
 
-    func encrypt(plaintext: Bytes) throws -> Message {
+    func encrypt(plaintext: Bytes, associatedData: Bytes? = nil) throws -> Message {
         let messageKey = try sendingChain.nextMessageKey()
         let header = Header(publicKey: rootChain.keyPair.publicKey, numberOfMessagesInPreviousSendingChain: previousSendingChainLength, messageNumber: sendMessageNumber)
         sendMessageNumber += 1
 
-        let headerData = try header.bytes()
+        var headerData = try header.bytes()
+        if let associatedData = associatedData {
+            headerData.append(contentsOf: associatedData)
+        }
+
         guard let cipher: Bytes = sodium.aead.xchacha20poly1305ietf.encrypt(message: plaintext, secretKey: messageKey, additionalData: headerData) else {
             throw DRError.encryptionFailed
         }
         return Message(header: header, cipher: cipher)
     }
 
-    func decrypt(message: Message) throws -> Bytes {
-        if let plaintext = try decryptSkippedMessage(message) {
+    func decrypt(message: Message, associatedData: Bytes? = nil) throws -> Bytes {
+        if let plaintext = try decryptSkippedMessage(message, associatedData: associatedData) {
             return plaintext
         }
 
@@ -87,16 +91,16 @@ public class DoubleRatchet {
         try skipReceivedMessages(until: message.header.messageNumber, remotePublicKey: message.header.publicKey)
 
         let messageKey = try receivingChain.nextMessageKey()
-        let plaintext = try decrypt(message: message, key: messageKey)
+        let plaintext = try decrypt(message: message, key: messageKey, associatedData: associatedData)
         receivedMessageNumber += 1
         return plaintext
     }
 
-    private func decryptSkippedMessage(_ message: Message) throws -> Bytes? {
+    private func decryptSkippedMessage(_ message: Message, associatedData: Bytes?) throws -> Bytes? {
         let skippedMessageIndex = MessageIndex(publicKey: message.header.publicKey, messageNumber: message.header.messageNumber)
         guard let messageKey = skippedMessageKeys[skippedMessageIndex] else { return nil }
 
-        let plaintext = try decrypt(message: message, key: messageKey)
+        let plaintext = try decrypt(message: message, key: messageKey, associatedData: associatedData)
 
         skippedMessageKeys[skippedMessageIndex] = nil
         messageKeyCache.removeAll { $0 == skippedMessageIndex }
@@ -104,8 +108,12 @@ public class DoubleRatchet {
         return plaintext
     }
 
-    private func decrypt(message: Message, key: MessageKey) throws -> Bytes {
-        let headerData = try message.header.bytes()
+    private func decrypt(message: Message, key: MessageKey, associatedData: Bytes?) throws -> Bytes {
+        var headerData = try message.header.bytes()
+        if let associatedData = associatedData {
+            headerData.append(contentsOf: associatedData)
+        }
+
         guard let plaintext = sodium.aead.xchacha20poly1305ietf.decrypt(nonceAndAuthenticatedCipherText: message.cipher, secretKey: key, additionalData: headerData) else {
             throw DRError.decryptionFailed
         }

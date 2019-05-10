@@ -163,6 +163,19 @@ final class DoubleRatchetTests: XCTestCase {
         }
     }
 
+    func testEncryptassociatedData() {
+        do {
+            let message = "aliceToBob".bytes
+            let associatedData = "AD".bytes
+            let encryptedMessage = try alice.encrypt(plaintext: message, associatedData: associatedData)
+            let decryptedMessage = try bob.decrypt(message: encryptedMessage, associatedData: associatedData)
+            XCTAssertEqual(message, decryptedMessage)
+
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+    }
+
     static var allTests = [
         ("testRatchetSteps", testRatchetSteps),
         ("testUnidirectionalConversation", testUnidirectionalConversation),
