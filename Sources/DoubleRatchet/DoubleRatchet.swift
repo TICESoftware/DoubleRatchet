@@ -5,9 +5,9 @@
 import Sodium
 import HKDF
 
-typealias KeyPair = KeyExchange.KeyPair
-typealias PublicKey = KeyExchange.PublicKey
-typealias MessageKey = Bytes
+public typealias KeyPair = KeyExchange.KeyPair
+public typealias PublicKey = KeyExchange.PublicKey
+public typealias MessageKey = Bytes
 
 public class DoubleRatchet {
     private let sodium = Sodium()
@@ -29,12 +29,12 @@ public class DoubleRatchet {
         return rootChain.keyPair.publicKey
     }
 
-    struct MessageIndex: Hashable {
+    private struct MessageIndex: Hashable {
         let publicKey: PublicKey
         let messageNumber: Int
     }
 
-    init(keyPair: KeyPair?, remotePublicKey: PublicKey?, sharedSecret: Bytes, maxSkip: Int, maxCache: Int, info: String) throws {
+    public init(keyPair: KeyPair?, remotePublicKey: PublicKey?, sharedSecret: Bytes, maxSkip: Int, maxCache: Int, info: String) throws {
         guard sharedSecret.count == 32 else {
             throw DRError.invalidSharedSecret
         }
@@ -61,7 +61,7 @@ public class DoubleRatchet {
         }
     }
 
-    func encrypt(plaintext: Bytes, associatedData: Bytes? = nil) throws -> Message {
+    public func encrypt(plaintext: Bytes, associatedData: Bytes? = nil) throws -> Message {
         let messageKey = try sendingChain.nextMessageKey()
         let header = Header(publicKey: rootChain.keyPair.publicKey, numberOfMessagesInPreviousSendingChain: previousSendingChainLength, messageNumber: sendMessageNumber)
         sendMessageNumber += 1
@@ -77,7 +77,7 @@ public class DoubleRatchet {
         return Message(header: header, cipher: cipher)
     }
 
-    func decrypt(message: Message, associatedData: Bytes? = nil) throws -> Bytes {
+    public func decrypt(message: Message, associatedData: Bytes? = nil) throws -> Bytes {
         if let plaintext = try decryptSkippedMessage(message, associatedData: associatedData) {
             return plaintext
         }
