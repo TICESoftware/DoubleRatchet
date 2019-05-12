@@ -5,7 +5,7 @@
 import Foundation
 import Sodium
 
-public struct Message {
+public struct Message: Codable {
     let header: Header
     let cipher: Bytes
 }
