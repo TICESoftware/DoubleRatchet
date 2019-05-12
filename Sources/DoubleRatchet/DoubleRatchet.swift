@@ -12,8 +12,8 @@ public typealias MessageKey = Bytes
 public class DoubleRatchet {
     private let sodium = Sodium()
 
-    let maxSkip: Int
-    let maxCache: Int
+    public let maxSkip: Int
+    public let maxCache: Int
 
     private var rootChain: RootChain
     private var sendingChain: MessageChain
@@ -25,7 +25,7 @@ public class DoubleRatchet {
     private var skippedMessageKeys: [MessageIndex: MessageKey]
     private var messageKeyCache: [MessageIndex]
 
-    var publicKey: PublicKey {
+    public var publicKey: PublicKey {
         return rootChain.keyPair.publicKey
     }
 
