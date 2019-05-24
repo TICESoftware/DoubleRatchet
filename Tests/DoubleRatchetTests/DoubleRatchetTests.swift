@@ -144,20 +144,20 @@ final class DoubleRatchetTests: XCTestCase {
                 delayedMessages.append(encryptedMessage)
             }
 
-            for i in (0...1).reversed() {
+            for i in (1...2).reversed() {
                 let plaintext = try bob.decrypt(message: delayedMessages[i])
                 XCTAssertEqual(plaintext, "aliceToBob\(i)".bytes)
             }
         } catch {
-            XCTFail()
+            XCTFail(error.localizedDescription)
         }
 
         do {
             _ = try bob.decrypt(message: delayedMessages[0])
             XCTFail()
         } catch {
-            guard case DRError.decryptionFailed = error else {
-                XCTFail()
+            guard case DRError.discardOldMessage = error else {
+                XCTFail(error.localizedDescription)
                 return
             }
         }

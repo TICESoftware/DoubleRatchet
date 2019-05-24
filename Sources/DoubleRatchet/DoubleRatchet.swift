@@ -82,6 +82,10 @@ public class DoubleRatchet {
             return plaintext
         }
 
+        if message.header.messageNumber < receivedMessageNumber {
+            throw DRError.discardOldMessage
+        }
+
         let remotePublicKey = rootChain.remotePublicKey ?? message.header.publicKey
         if message.header.publicKey != rootChain.remotePublicKey {
             try skipReceivedMessages(until: message.header.numberOfMessagesInPreviousSendingChain, remotePublicKey: remotePublicKey)
@@ -131,7 +135,10 @@ public class DoubleRatchet {
 
             skippedMessageKeys[skippedMessageIndex] = skippedMessageKey
             messageKeyCache.append(skippedMessageIndex)
-            while messageKeyCache.count > maxCache { messageKeyCache.removeLast() }
+            while messageKeyCache.count > maxCache {
+                let removedIndex = messageKeyCache.removeFirst()
+                skippedMessageKeys[removedIndex] = nil
+            }
             
             receivedMessageNumber += 1
         }
