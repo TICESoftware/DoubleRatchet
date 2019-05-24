@@ -29,9 +29,13 @@ public class DoubleRatchet {
         return rootChain.keyPair.publicKey
     }
 
-    private struct MessageIndex: Hashable {
+    public struct MessageIndex: Hashable {
         let publicKey: PublicKey
         let messageNumber: Int
+    }
+
+    public var sessionState: SessionState {
+        return SessionState(info: rootChain.info, maxSkip: maxSkip, maxCache: maxCache, rootKey: rootChain.rootKey, rootChainKeyPair: rootChain.keyPair, rootChainRemotePublicKey: rootChain.remotePublicKey, sendingChainKey: sendingChain.chainKey, receivingChainKey: receivingChain.chainKey, sendMessageNumber: sendMessageNumber, receivedMessageNumber: receivedMessageNumber, previousSendingChainLength: previousSendingChainLength, skippedMessageKeys: skippedMessageKeys, messageKeyCache: messageKeyCache)
     }
 
     public init(keyPair: KeyPair?, remotePublicKey: PublicKey?, sharedSecret: Bytes, maxSkip: Int, maxCache: Int, info: String) throws {
@@ -59,6 +63,21 @@ public class DoubleRatchet {
         if remotePublicKey != nil {
             sendingChain.chainKey = try self.rootChain.ratchetStep(side: .sending)
         }
+    }
+
+    public init(sessionState: SessionState) {
+        self.maxSkip = sessionState.maxSkip
+        self.maxCache = sessionState.maxCache
+
+        self.rootChain = RootChain(keyPair: sessionState.rootChainKeyPair, remotePublicKey: sessionState.rootChainRemotePublicKey, rootKey: sessionState.rootKey, info: sessionState.info)
+        self.sendingChain = MessageChain(chainKey: sessionState.sendingChainKey)
+        self.receivingChain = MessageChain(chainKey: sessionState.receivingChainKey)
+
+        self.sendMessageNumber = sessionState.sendMessageNumber
+        self.receivedMessageNumber = sessionState.receivedMessageNumber
+        self.previousSendingChainLength = sessionState.previousSendingChainLength
+        self.skippedMessageKeys = sessionState.skippedMessageKeys
+        self.messageKeyCache = sessionState.messageKeyCache
     }
 
     public func encrypt(plaintext: Bytes, associatedData: Bytes? = nil) throws -> Message {

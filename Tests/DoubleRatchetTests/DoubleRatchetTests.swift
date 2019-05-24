@@ -163,7 +163,7 @@ final class DoubleRatchetTests: XCTestCase {
         }
     }
 
-    func testEncryptassociatedData() {
+    func testEncryptAssociatedData() {
         do {
             let message = "aliceToBob".bytes
             let associatedData = "AD".bytes
@@ -176,6 +176,37 @@ final class DoubleRatchetTests: XCTestCase {
         }
     }
 
+    func testReinitializeSession() {
+        bob = try! DoubleRatchet(keyPair: nil, remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 1, info: info)
+        alice = try! DoubleRatchet(keyPair: nil, remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 1, info: info)
+
+        do {
+            let message = "aliceToBob"
+            let encryptedMessage = try alice.encrypt(plaintext: message.bytes)
+            let plaintext = try bob.decrypt(message: encryptedMessage)
+            XCTAssertEqual(plaintext.utf8String!, message)
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+
+        bob = DoubleRatchet(sessionState: bob.sessionState)
+        alice = DoubleRatchet(sessionState: alice.sessionState)
+
+        do {
+            let messageAliceToBob = "aliceToBob"
+            let encryptedMessageAliceToBob = try alice.encrypt(plaintext: messageAliceToBob.bytes)
+            let plaintextAliceToBob = try bob.decrypt(message: encryptedMessageAliceToBob)
+            XCTAssertEqual(plaintextAliceToBob.utf8String!, messageAliceToBob)
+
+            let messageBobToAlice = "bobToAlice"
+            let encryptedMessageBobToAlice = try bob.encrypt(plaintext: messageBobToAlice.bytes)
+            let plaintextBobToAlice = try alice.decrypt(message: encryptedMessageBobToAlice)
+            XCTAssertEqual(plaintextBobToAlice.utf8String!, messageBobToAlice)
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+    }
+
     static var allTests = [
         ("testRatchetSteps", testRatchetSteps),
         ("testUnidirectionalConversation", testUnidirectionalConversation),
@@ -183,5 +214,7 @@ final class DoubleRatchetTests: XCTestCase {
         ("testLostMessagesAndRatchetStep", testLostMessagesAndRatchetStep),
         ("testExceedMaxSkipMessages", testExceedMaxSkipMessages),
         ("testExceedMaxCacheMessageKeys", testExceedMaxCacheMessageKeys),
+        ("testEncryptAssociatedData", testEncryptAssociatedData),
+        ("testReinitializeSession", testReinitializeSession),
     ]
 }

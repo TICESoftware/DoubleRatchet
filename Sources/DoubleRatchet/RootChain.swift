@@ -4,7 +4,7 @@ import HKDF
 //  Copyright © 2019 Anbion. All rights reserved.
 //
 
-typealias RootKey = Bytes
+public typealias RootKey = Bytes
 
 struct RootChain {
     let sodium = Sodium()

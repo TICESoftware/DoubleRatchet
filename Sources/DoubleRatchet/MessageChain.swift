@@ -4,14 +4,18 @@
 
 import Sodium
 
-typealias ChainKey = Bytes
+public typealias ChainKey = Bytes
 
 struct MessageChain {
     private let sodium = Sodium()
     private let messageKeyInput = Bytes([UInt8(1)])
     private let chainKeyInput = Bytes([UInt8(2)])
 
-    var chainKey: Bytes?
+    var chainKey: ChainKey?
+
+    init(chainKey: ChainKey? = nil) {
+        self.chainKey = chainKey
+    }
 
     // KDF_CK(ck)
     mutating func nextMessageKey() throws -> Bytes {
