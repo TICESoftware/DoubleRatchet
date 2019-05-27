@@ -13,7 +13,6 @@ public class DoubleRatchet {
     private let sodium = Sodium()
 
     public let maxSkip: Int
-    public let maxCache: Int
 
     private var rootChain: RootChain
     private var sendingChain: MessageChain
@@ -22,8 +21,7 @@ public class DoubleRatchet {
     private var sendMessageNumber: Int
     private var receivedMessageNumber: Int
     private var previousSendingChainLength: Int
-    private var skippedMessageKeys: [MessageIndex: MessageKey]
-    private var messageKeyCache: [MessageIndex]
+    private var messageKeyCache: MessageKeyCache
 
     public var publicKey: PublicKey {
         return rootChain.keyPair.publicKey
@@ -35,7 +33,7 @@ public class DoubleRatchet {
     }
 
     public var sessionState: SessionState {
-        return SessionState(info: rootChain.info, maxSkip: maxSkip, maxCache: maxCache, rootKey: rootChain.rootKey, rootChainKeyPair: rootChain.keyPair, rootChainRemotePublicKey: rootChain.remotePublicKey, sendingChainKey: sendingChain.chainKey, receivingChainKey: receivingChain.chainKey, sendMessageNumber: sendMessageNumber, receivedMessageNumber: receivedMessageNumber, previousSendingChainLength: previousSendingChainLength, skippedMessageKeys: skippedMessageKeys, messageKeyCache: messageKeyCache)
+        return SessionState(rootKey: rootChain.rootKey, rootChainKeyPair: rootChain.keyPair, rootChainRemotePublicKey: rootChain.remotePublicKey, sendingChainKey: sendingChain.chainKey, receivingChainKey: receivingChain.chainKey, sendMessageNumber: sendMessageNumber, receivedMessageNumber: receivedMessageNumber, previousSendingChainLength: previousSendingChainLength, messageKeyCacheState: messageKeyCache.cacheState, info: rootChain.info, maxSkip: maxSkip, maxCache: messageKeyCache.maxCache)
     }
 
     public init(keyPair: KeyPair?, remotePublicKey: PublicKey?, sharedSecret: Bytes, maxSkip: Int, maxCache: Int, info: String) throws {
@@ -44,7 +42,6 @@ public class DoubleRatchet {
         }
 
         self.maxSkip = maxSkip
-        self.maxCache = maxCache
 
         guard let keyPair = keyPair ?? Sodium().keyExchange.keyPair() else {
             throw DRError.dhKeyGenerationFailed
@@ -57,8 +54,7 @@ public class DoubleRatchet {
         self.sendMessageNumber = 0
         self.receivedMessageNumber = 0
         self.previousSendingChainLength = 0
-        self.skippedMessageKeys = [:]
-        self.messageKeyCache = []
+        self.messageKeyCache = MessageKeyCache(maxCache: maxCache)
 
         if remotePublicKey != nil {
             sendingChain.chainKey = try self.rootChain.ratchetStep(side: .sending)
@@ -67,7 +63,6 @@ public class DoubleRatchet {
 
     public init(sessionState: SessionState) {
         self.maxSkip = sessionState.maxSkip
-        self.maxCache = sessionState.maxCache
 
         self.rootChain = RootChain(keyPair: sessionState.rootChainKeyPair, remotePublicKey: sessionState.rootChainRemotePublicKey, rootKey: sessionState.rootKey, info: sessionState.info)
         self.sendingChain = MessageChain(chainKey: sessionState.sendingChainKey)
@@ -76,8 +71,7 @@ public class DoubleRatchet {
         self.sendMessageNumber = sessionState.sendMessageNumber
         self.receivedMessageNumber = sessionState.receivedMessageNumber
         self.previousSendingChainLength = sessionState.previousSendingChainLength
-        self.skippedMessageKeys = sessionState.skippedMessageKeys
-        self.messageKeyCache = sessionState.messageKeyCache
+        self.messageKeyCache = MessageKeyCache(maxCache: sessionState.maxCache, cacheState: sessionState.messageKeyCacheState)
     }
 
     public func encrypt(plaintext: Bytes, associatedData: Bytes? = nil) throws -> Message {
@@ -97,8 +91,8 @@ public class DoubleRatchet {
     }
 
     public func decrypt(message: Message, associatedData: Bytes? = nil) throws -> Bytes {
-        if let plaintext = try decryptSkippedMessage(message, associatedData: associatedData) {
-            return plaintext
+        if let cachedMessageKey = messageKeyCache.getMessageKey(messageNumber: message.header.messageNumber, publicKey: message.header.publicKey) {
+            return try decrypt(message: message, key: cachedMessageKey, associatedData: associatedData)
         }
 
         if message.header.messageNumber < receivedMessageNumber {
@@ -116,18 +110,6 @@ public class DoubleRatchet {
         let messageKey = try receivingChain.nextMessageKey()
         let plaintext = try decrypt(message: message, key: messageKey, associatedData: associatedData)
         receivedMessageNumber += 1
-        return plaintext
-    }
-
-    private func decryptSkippedMessage(_ message: Message, associatedData: Bytes?) throws -> Bytes? {
-        let skippedMessageIndex = MessageIndex(publicKey: message.header.publicKey, messageNumber: message.header.messageNumber)
-        guard let messageKey = skippedMessageKeys[skippedMessageIndex] else { return nil }
-
-        let plaintext = try decrypt(message: message, key: messageKey, associatedData: associatedData)
-
-        skippedMessageKeys[skippedMessageIndex] = nil
-        messageKeyCache.removeAll { $0 == skippedMessageIndex }
-
         return plaintext
     }
 
@@ -150,15 +132,7 @@ public class DoubleRatchet {
 
         while receivedMessageNumber < nextMessageNumber {
             let skippedMessageKey = try receivingChain.nextMessageKey()
-            let skippedMessageIndex = MessageIndex(publicKey: remotePublicKey, messageNumber: receivedMessageNumber)
-
-            skippedMessageKeys[skippedMessageIndex] = skippedMessageKey
-            messageKeyCache.append(skippedMessageIndex)
-            while messageKeyCache.count > maxCache {
-                let removedIndex = messageKeyCache.removeFirst()
-                skippedMessageKeys[removedIndex] = nil
-            }
-            
+            messageKeyCache.add(messageKey: skippedMessageKey, messageNumber: receivedMessageNumber, publicKey: remotePublicKey)
             receivedMessageNumber += 1
         }
     }

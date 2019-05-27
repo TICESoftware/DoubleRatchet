@@ -16,6 +16,20 @@ public struct SessionState {
     public let sendMessageNumber: Int
     public let receivedMessageNumber: Int
     public let previousSendingChainLength: Int
-    public let skippedMessageKeys: [DoubleRatchet.MessageIndex: MessageKey]
-    public let messageKeyCache: [DoubleRatchet.MessageIndex]
+    public let messageKeyCacheState: MessageKeyCacheState
+
+    public init(rootKey: RootKey, rootChainKeyPair: KeyPair, rootChainRemotePublicKey: PublicKey?, sendingChainKey: ChainKey?, receivingChainKey: ChainKey?, sendMessageNumber: Int, receivedMessageNumber: Int, previousSendingChainLength: Int, messageKeyCacheState: MessageKeyCacheState, info: String, maxSkip: Int, maxCache: Int) {
+        self.rootKey = rootKey
+        self.rootChainKeyPair = rootChainKeyPair
+        self.rootChainRemotePublicKey = rootChainRemotePublicKey
+        self.sendingChainKey = sendingChainKey
+        self.receivingChainKey = receivingChainKey
+        self.sendMessageNumber = sendMessageNumber
+        self.receivedMessageNumber = receivedMessageNumber
+        self.previousSendingChainLength = previousSendingChainLength
+        self.messageKeyCacheState = messageKeyCacheState
+        self.info = info
+        self.maxSkip = maxSkip
+        self.maxCache = maxCache
+    }
 }

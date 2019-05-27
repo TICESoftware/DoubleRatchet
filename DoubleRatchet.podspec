@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
 
   s.name          = "DoubleRatchet"
-  s.version       = "1.0.2"
+  s.version       = "1.1.0"
   s.summary       = "Double Ratchet protocol."
   s.platform      = :ios, "11.0"
   s.swift_version = "5.0"
