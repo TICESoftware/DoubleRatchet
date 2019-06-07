@@ -82,8 +82,11 @@ final class DoubleRatchetTests: XCTestCase {
     func testLostMessagesAndRatchetStep() {
         do {
             let message = "aliceToBob".bytes
-            let encryptedMessage = try alice.encrypt(plaintext: message)
-            _ = try bob.decrypt(message: encryptedMessage)
+
+            for _ in 0...1 {
+                let encryptedMessage = try alice.encrypt(plaintext: message)
+                _ = try bob.decrypt(message: encryptedMessage)
+            }
 
             var delayedMessages: [Message] = []
             for i in 0...1 {

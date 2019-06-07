@@ -95,7 +95,7 @@ public class DoubleRatchet {
             return try decrypt(message: message, key: cachedMessageKey, associatedData: associatedData)
         }
 
-        if message.header.messageNumber < receivedMessageNumber {
+        if message.header.publicKey == rootChain.remotePublicKey && message.header.messageNumber < receivedMessageNumber {
             throw DRError.discardOldMessage
         }
 
