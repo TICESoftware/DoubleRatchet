@@ -1,15 +1,23 @@
-public struct MessageKeyCache {
+import Foundation
+
+public class MessageKeyCache {
     private struct MessageIndex: Hashable {
         let publicKey: PublicKey
         let messageNumber: Int
     }
 
+    private let cacheQueue = DispatchQueue(label: "de.anbion.DoubleRatchet.MessageKeyCache", attributes: .concurrent)
     private var skippedMessageKeys: [MessageIndex: MessageKey]
     private var messageKeyCache: [MessageIndex]
     let maxCache: Int
 
     public var cacheState: MessageKeyCacheState {
-        return messageKeyCache.map { MessageKeyCacheEntry(publicKey: $0.publicKey, messageNumber: $0.messageNumber, messageKey: skippedMessageKeys[$0]!) }
+        cacheQueue.sync {
+            return messageKeyCache.compactMap {
+                guard let messageKey = skippedMessageKeys[$0] else { return nil }
+                return MessageKeyCacheEntry(publicKey: $0.publicKey, messageNumber: $0.messageNumber, messageKey: messageKey)
+            }
+        }
     }
 
     init(maxCache: Int, cacheState: MessageKeyCacheState = []) {
@@ -22,24 +30,29 @@ public struct MessageKeyCache {
         }
     }
 
-    mutating func add(messageKey: MessageKey, messageNumber: Int, publicKey: PublicKey) {
+    func add(messageKey: MessageKey, messageNumber: Int, publicKey: PublicKey) {
         let messageIndex = MessageIndex(publicKey: publicKey, messageNumber: messageNumber)
-        skippedMessageKeys[messageIndex] = messageKey
-        messageKeyCache.append(messageIndex)
 
-        while messageKeyCache.count > maxCache {
-            let removedIndex = messageKeyCache.removeFirst()
-            skippedMessageKeys[removedIndex] = nil
+        cacheQueue.async(flags: .barrier) {
+            self.skippedMessageKeys[messageIndex] = messageKey
+            self.messageKeyCache.append(messageIndex)
+
+            while self.messageKeyCache.count > self.maxCache {
+                let removedIndex = self.messageKeyCache.removeFirst()
+                self.skippedMessageKeys[removedIndex] = nil
+            }
         }
     }
 
-    mutating func getMessageKey(messageNumber: Int, publicKey: PublicKey) -> MessageKey? {
+    func getMessageKey(messageNumber: Int, publicKey: PublicKey) -> MessageKey? {
         let messageIndex = MessageIndex(publicKey: publicKey, messageNumber: messageNumber)
-        guard let messageKey = skippedMessageKeys[messageIndex] else { return nil }
+        guard let messageKey = cacheQueue.sync (execute: { skippedMessageKeys[messageIndex] }) else { return nil }
 
-        skippedMessageKeys[messageIndex] = nil
-        messageKeyCache.removeAll { $0 == messageIndex }
-
+        cacheQueue.async(flags: .barrier) {
+            self.skippedMessageKeys[messageIndex] = nil
+            self.messageKeyCache.removeAll { $0 == messageIndex }
+        }
+        
         return messageKey
     }
 }
