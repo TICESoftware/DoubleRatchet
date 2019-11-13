@@ -16,7 +16,9 @@ public struct Header: Codable {
     public let messageNumber: Int
 
     func bytes() throws -> Bytes {
-        let headerData = try JSONEncoder().encode(self)
-        return Bytes(headerData)
+        var bytes = publicKey
+        bytes.append(UInt8(numberOfMessagesInPreviousSendingChain))
+        bytes.append(UInt8(messageNumber))
+        return bytes
     }
 }
