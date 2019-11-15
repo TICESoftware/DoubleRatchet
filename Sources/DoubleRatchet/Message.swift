@@ -17,8 +17,12 @@ public struct Header: Codable {
 
     func bytes() throws -> Bytes {
         var bytes = publicKey
-        bytes.append(UInt8(numberOfMessagesInPreviousSendingChain))
-        bytes.append(UInt8(messageNumber))
+        bytes.append(contentsOf: byteArray(from: numberOfMessagesInPreviousSendingChain))
+        bytes.append(contentsOf: byteArray(from: messageNumber))
         return bytes
+    }
+
+    private func byteArray(from value: Int) -> Bytes {
+        return withUnsafeBytes(of: value.bigEndian) { Bytes($0) }
     }
 }
