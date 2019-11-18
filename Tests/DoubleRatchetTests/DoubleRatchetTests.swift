@@ -177,6 +177,15 @@ final class DoubleRatchetTests: XCTestCase {
         let plaintextBobToAlice = try alice.decrypt(message: encryptedMessageBobToAlice)
         XCTAssertEqual(plaintextBobToAlice.utf8String!, messageBobToAlice)
     }
+    
+    func testMessageHeaderEncoding() throws {
+        let pubKey = Sodium().utils.hex2bin("0efd0d78c9ba26b39588848ddf69b02807fb85916c2b004d7af759f932544443")!
+        let header = Header(publicKey: pubKey, numberOfMessagesInPreviousSendingChain: 1234567890, messageNumber: 9876543210)
+        
+        let headerBytesAre = try header.bytes()
+        let headerBytesShouldBe = Sodium().utils.hex2bin("0efd0d78c9ba26b39588848ddf69b02807fb85916c2b004d7af759f93254444300000000499602d2000000024cb016ea")!
+        XCTAssertEqual(headerBytesAre, headerBytesShouldBe)
+    }
 
     static var allTests = [
         ("testRatchetSteps", testRatchetSteps),
@@ -187,5 +196,6 @@ final class DoubleRatchetTests: XCTestCase {
         ("testExceedMaxCacheMessageKeys", testExceedMaxCacheMessageKeys),
         ("testEncryptAssociatedData", testEncryptAssociatedData),
         ("testReinitializeSession", testReinitializeSession),
+        ("testMessageHeaderEncoding", testMessageHeaderEncoding),
     ]
 }
