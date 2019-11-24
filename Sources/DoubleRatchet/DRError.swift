@@ -8,6 +8,7 @@ public enum DRError: LocalizedError {
     case invalidSharedSecret
     case dhKeyGenerationFailed
     case dhKeyExchangeFailed
+    case chainKeyMissing
     case messageChainRatchetStepFailed
     case encryptionFailed
     case decryptionFailed
@@ -20,6 +21,7 @@ public enum DRError: LocalizedError {
         case .invalidSharedSecret: return "Shared secret must be 32 bytes."
         case .dhKeyGenerationFailed: return "DH keypair could not be created."
         case .dhKeyExchangeFailed: return "DH failed."
+        case .chainKeyMissing: return "Message chain does not have a chain key."
         case .messageChainRatchetStepFailed: return "Could not do ratchet step in message chain."
         case .encryptionFailed: return "Encryption failed."
         case .decryptionFailed: return "Decryption failed."

@@ -19,8 +19,11 @@ struct MessageChain {
 
     // KDF_CK(ck)
     mutating func nextMessageKey() throws -> Bytes {
-        guard let chainKey = chainKey,
-            let messageKey = sodium.auth.tag(message: messageKeyInput, secretKey: chainKey),
+        guard let chainKey = chainKey else {
+            throw DRError.chainKeyMissing
+        }
+
+        guard let messageKey = sodium.auth.tag(message: messageKeyInput, secretKey: chainKey),
             let newChainKey = sodium.auth.tag(message: chainKeyInput, secretKey: chainKey) else {
                 throw DRError.messageChainRatchetStepFailed
         }

@@ -15,7 +15,7 @@ public struct Header: Codable {
     public let numberOfMessagesInPreviousSendingChain: Int
     public let messageNumber: Int
 
-    func bytes() throws -> Bytes {
+    public func bytes() throws -> Bytes {
         var bytes = publicKey
         bytes.append(contentsOf: byteArray(from: numberOfMessagesInPreviousSendingChain))
         bytes.append(contentsOf: byteArray(from: messageNumber))
