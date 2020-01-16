@@ -12,7 +12,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/jedisct1/swift-sodium", from: "0.8.0"),
-        .package(url: "git@github.com:AnbionApps/HKDF.git", from: "1.0.0"),
+        .package(url: "git@github.com:TICESoftware/HKDF.git", from: "1.0.0"),
     ],
     targets: [
         .target(

@@ -12,11 +12,11 @@
       },
       {
         "package": "HKDF",
-        "repositoryURL": "git@github.com:AnbionApps/HKDF.git",
+        "repositoryURL": "git@github.com:TICESoftware/HKDF.git",
         "state": {
           "branch": null,
-          "revision": "1041b589cb7b033892d61666ec3894a902321938",
-          "version": "1.0.1"
+          "revision": "b222816c923e02dd896637e824f67b5e225629b4",
+          "version": "1.0.2"
         }
       },
       {
