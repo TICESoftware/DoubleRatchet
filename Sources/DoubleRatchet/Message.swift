@@ -5,12 +5,12 @@
 import Foundation
 import Sodium
 
-public struct Message: Codable {
+public struct Message {
     public let header: Header
     public let cipher: Bytes
 }
 
-public struct Header: Codable {
+public struct Header {
     public let publicKey: KeyExchange.PublicKey
     public let numberOfMessagesInPreviousSendingChain: Int
     public let messageNumber: Int
