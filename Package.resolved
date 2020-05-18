@@ -12,11 +12,11 @@
       },
       {
         "package": "HKDF",
-        "repositoryURL": "git@github.com:TICESoftware/HKDF.git",
+        "repositoryURL": "https://github.com/TICESoftware/HKDF.git",
         "state": {
           "branch": null,
-          "revision": "b222816c923e02dd896637e824f67b5e225629b4",
-          "version": "1.0.2"
+          "revision": "19491ada43f28d42affd513224c6ec776969c656",
+          "version": "1.0.4"
         }
       },
       {
