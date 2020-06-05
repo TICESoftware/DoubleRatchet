@@ -4,7 +4,7 @@
 
 import Foundation
 
-public enum DRError: LocalizedError {
+public enum DRError: Error, CustomStringConvertible {
     case invalidSharedSecret
     case dhKeyGenerationFailed
     case dhKeyExchangeFailed
@@ -16,7 +16,7 @@ public enum DRError: LocalizedError {
     case remotePublicKeyMissing
     case discardOldMessage
 
-    public var errorDescription: String? {
+    public var description: String {
         switch self {
         case .invalidSharedSecret: return "Shared secret must be 32 bytes."
         case .dhKeyGenerationFailed: return "DH keypair could not be created."
