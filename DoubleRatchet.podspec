@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
 
   s.name          = "DoubleRatchet"
-  s.version       = "1.1.10"
+  s.version       = "1.2.0"
   s.summary       = "Double Ratchet protocol."
   s.platform      = :ios, "11.0"
   s.swift_version = "5.0"
@@ -16,5 +16,6 @@ Pod::Spec.new do |s|
 
   s.dependency "Sodium"
   s.dependency "HKDF"
+  s.dependency "Logging"
 
 end

@@ -13,11 +13,12 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/jedisct1/swift-sodium", from: "0.8.0"),
         .package(url: "https://github.com/TICESoftware/HKDF.git", from: "1.0.4"),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
     ],
     targets: [
         .target(
             name: "DoubleRatchet",
-            dependencies: ["Sodium", "HKDF"]),
+            dependencies: ["Sodium", "HKDF", "Logging"]),
         .testTarget(
             name: "DoubleRatchetTests",
             dependencies: ["DoubleRatchet", "Sodium"]),

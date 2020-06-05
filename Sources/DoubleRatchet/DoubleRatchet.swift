@@ -4,6 +4,7 @@
 
 import Sodium
 import HKDF
+import Logging
 
 public typealias KeyPair = KeyExchange.KeyPair
 public typealias PublicKey = KeyExchange.PublicKey
@@ -73,6 +74,10 @@ public class DoubleRatchet {
         self.previousSendingChainLength = sessionState.previousSendingChainLength
         self.messageKeyCache = MessageKeyCache(maxCache: sessionState.maxCache, cacheState: sessionState.messageKeyCacheState)
     }
+    
+    public func setLogBackend(factory: @escaping ((String) -> LogHandler)) {
+        LoggingSystem.bootstrap(factory)
+    }
 
     public func encrypt(plaintext: Bytes, associatedData: Bytes? = nil) throws -> Message {
         let messageKey = try sendingChain.nextMessageKey()
@@ -92,6 +97,7 @@ public class DoubleRatchet {
 
     public func decrypt(message: Message, associatedData: Bytes? = nil) throws -> Bytes {
         if let cachedMessageKey = messageKeyCache.getMessageKey(messageNumber: message.header.messageNumber, publicKey: message.header.publicKey) {
+            logger.debug("Use cached message key to decrypt message with number \(message.header.messageNumber) in receiving chain with public key \(fingerprint(publicKey: message.header.publicKey)).")
             return try decrypt(message: message, key: cachedMessageKey, associatedData: associatedData)
         }
 
@@ -131,6 +137,7 @@ public class DoubleRatchet {
         }
 
         while receivedMessageNumber < nextMessageNumber {
+            logger.debug("Skipping message with number \(receivedMessageNumber) in receiving chain with public key \(fingerprint(publicKey: remotePublicKey)).")
             let skippedMessageKey = try receivingChain.nextMessageKey()
             messageKeyCache.add(messageKey: skippedMessageKey, messageNumber: receivedMessageNumber, publicKey: remotePublicKey)
             receivedMessageNumber += 1
@@ -152,5 +159,13 @@ public class DoubleRatchet {
         rootChain.keyPair = newKeyPair
 
         sendingChain.chainKey = try rootChain.ratchetStep(side: .sending)
+    }
+    
+    private func fingerprint(publicKey: PublicKey) -> String {
+        guard let fingerprint = sodium.genericHash.hash(message: publicKey),
+            let string = sodium.utils.bin2base64(Array(fingerprint.prefix(4))) else {
+            return "n/a"
+        }
+        return string
     }
 }

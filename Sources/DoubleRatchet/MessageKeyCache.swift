@@ -6,7 +6,7 @@ public class MessageKeyCache {
         let messageNumber: Int
     }
 
-    private let cacheQueue = DispatchQueue(label: "de.anbion.DoubleRatchet.MessageKeyCache", attributes: .concurrent)
+    private let cacheQueue = DispatchQueue(label: "software.tice.DoubleRatchet.MessageKeyCache", attributes: .concurrent)
     private var skippedMessageKeys: [MessageIndex: MessageKey]
     private var messageKeyCache: [MessageIndex]
     let maxCache: Int
