@@ -75,8 +75,8 @@ public class DoubleRatchet {
         self.messageKeyCache = MessageKeyCache(maxCache: sessionState.maxCache, cacheState: sessionState.messageKeyCacheState)
     }
     
-    public func setLogBackend(factory: @escaping ((String) -> LogHandler)) {
-        LoggingSystem.bootstrap(factory)
+    public func setLogger(_ newLogger: Logger) {
+        logger = newLogger
     }
 
     public func encrypt(plaintext: Bytes, associatedData: Bytes? = nil) throws -> Message {

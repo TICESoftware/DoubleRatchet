@@ -5,4 +5,4 @@
 import Foundation
 import Logging
 
-let logger = Logger(label: "software.tice.DoubleRatchet.Logging")
+var logger = Logger(label: "software.tice.DoubleRatchet.Logging")
