@@ -132,12 +132,13 @@ public class DoubleRatchet {
     }
 
     private func skipReceivedMessages(until nextMessageNumber: Int, remotePublicKey: PublicKey) throws {
+        logger.debug("Skipping messages \(receivedMessageNumber)-\(nextMessageNumber) in receiving chain with public key \(fingerprint(publicKey: remotePublicKey)).")
+        
         guard nextMessageNumber - receivedMessageNumber <= maxSkip else {
             throw DRError.exceedMaxSkip
         }
 
         while receivedMessageNumber < nextMessageNumber {
-            logger.debug("Skipping message with number \(receivedMessageNumber) in receiving chain with public key \(fingerprint(publicKey: remotePublicKey)).")
             let skippedMessageKey = try receivingChain.nextMessageKey()
             messageKeyCache.add(messageKey: skippedMessageKey, messageNumber: receivedMessageNumber, publicKey: remotePublicKey)
             receivedMessageNumber += 1
