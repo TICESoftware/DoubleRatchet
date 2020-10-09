@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
 
   s.name          = "DoubleRatchet"
-  s.version       = "1.2.1"
+  s.version       = "1.2.2"
   s.summary       = "Double Ratchet protocol."
   s.platform      = :ios, "11.0"
   s.swift_version = "5.0"
@@ -14,8 +14,13 @@ Pod::Spec.new do |s|
 
   s.source_files  = "Sources/**/*"
 
-  s.dependency "Sodium"
+  #s.dependency "Sodium"
+  s.dependency 'Sodium-Fork'
+
   s.dependency "HKDF"
   s.dependency "Logging"
+
+  s.user_target_xcconfig = { 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64' }
+  s.pod_target_xcconfig = { 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64' }
 
 end
