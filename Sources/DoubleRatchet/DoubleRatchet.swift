@@ -96,6 +96,8 @@ public class DoubleRatchet {
     }
 
     public func decrypt(message: Message, associatedData: Bytes? = nil) throws -> Bytes {
+        logger.debug("Decrypting message with number \(message.header.messageNumber).")
+        
         if let cachedMessageKey = messageKeyCache.getMessageKey(messageNumber: message.header.messageNumber, publicKey: message.header.publicKey) {
             logger.debug("Use cached message key to decrypt message with number \(message.header.messageNumber) in receiving chain with public key \(fingerprint(publicKey: message.header.publicKey)).")
             return try decrypt(message: message, key: cachedMessageKey, associatedData: associatedData)
