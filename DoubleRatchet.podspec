@@ -1,9 +1,9 @@
 Pod::Spec.new do |s|
 
   s.name          = "DoubleRatchet"
-  s.version       = "1.2.2"
+  s.version       = "1.2.3"
   s.summary       = "Double Ratchet protocol."
-  s.platform      = :ios, "11.0"
+  s.platform      = :ios, "12.0"
   s.swift_version = "5.0"
 
   s.homepage      = "http://ticeapp.com"
@@ -14,9 +14,7 @@ Pod::Spec.new do |s|
 
   s.source_files  = "Sources/**/*"
 
-  #s.dependency "Sodium"
-  s.dependency 'Sodium-Fork'
-
+  s.dependency "Sodium"
   s.dependency "HKDF"
   s.dependency "Logging"
 
