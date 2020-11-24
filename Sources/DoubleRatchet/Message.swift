@@ -1,5 +1,5 @@
 //
-//  Copyright © 2019 Anbion. All rights reserved.
+//  Copyright © 2020 TICE Software UG (haftungsbeschränkt). All rights reserved.
 //
 
 import Foundation
