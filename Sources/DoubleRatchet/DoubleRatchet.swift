@@ -22,7 +22,7 @@ public class DoubleRatchet {
     private var sendMessageNumber: Int
     private var receivedMessageNumber: Int
     private var previousSendingChainLength: Int
-    private var messageKeyCache: MessageKeyCache
+    private var messageKeyCache: MessageKeyCache?
 
     public var publicKey: PublicKey {
         return rootChain.keyPair.publicKey
@@ -34,10 +34,10 @@ public class DoubleRatchet {
     }
 
     public var sessionState: SessionState {
-        return SessionState(rootKey: rootChain.rootKey, rootChainKeyPair: rootChain.keyPair, rootChainRemotePublicKey: rootChain.remotePublicKey, sendingChainKey: sendingChain.chainKey, receivingChainKey: receivingChain.chainKey, sendMessageNumber: sendMessageNumber, receivedMessageNumber: receivedMessageNumber, previousSendingChainLength: previousSendingChainLength, messageKeyCacheState: messageKeyCache.cacheState, info: rootChain.info, maxSkip: maxSkip, maxCache: messageKeyCache.maxCache)
+        return SessionState(rootKey: rootChain.rootKey, rootChainKeyPair: rootChain.keyPair, rootChainRemotePublicKey: rootChain.remotePublicKey, sendingChainKey: sendingChain.chainKey, receivingChainKey: receivingChain.chainKey, sendMessageNumber: sendMessageNumber, receivedMessageNumber: receivedMessageNumber, previousSendingChainLength: previousSendingChainLength, info: rootChain.info, maxSkip: maxSkip)
     }
 
-    public init(keyPair: KeyPair?, remotePublicKey: PublicKey?, sharedSecret: Bytes, maxSkip: Int, maxCache: Int, info: String) throws {
+    public init(keyPair: KeyPair?, remotePublicKey: PublicKey?, sharedSecret: Bytes, maxSkip: Int, info: String, messageKeyCache: MessageKeyCache?) throws {
         guard sharedSecret.count == 32 else {
             throw DRError.invalidSharedSecret
         }
@@ -55,14 +55,14 @@ public class DoubleRatchet {
         self.sendMessageNumber = 0
         self.receivedMessageNumber = 0
         self.previousSendingChainLength = 0
-        self.messageKeyCache = MessageKeyCache(maxCache: maxCache)
+        self.messageKeyCache = messageKeyCache
 
         if remotePublicKey != nil {
             sendingChain.chainKey = try self.rootChain.ratchetStep(side: .sending)
         }
     }
 
-    public init(sessionState: SessionState) {
+    public init(sessionState: SessionState, messageKeyCache: MessageKeyCache?) {
         self.maxSkip = sessionState.maxSkip
 
         self.rootChain = RootChain(keyPair: sessionState.rootChainKeyPair, remotePublicKey: sessionState.rootChainRemotePublicKey, rootKey: sessionState.rootKey, info: sessionState.info)
@@ -72,7 +72,7 @@ public class DoubleRatchet {
         self.sendMessageNumber = sessionState.sendMessageNumber
         self.receivedMessageNumber = sessionState.receivedMessageNumber
         self.previousSendingChainLength = sessionState.previousSendingChainLength
-        self.messageKeyCache = MessageKeyCache(maxCache: sessionState.maxCache, cacheState: sessionState.messageKeyCacheState)
+        self.messageKeyCache = messageKeyCache
     }
     
     public func setLogger(_ newLogger: Logger) {
@@ -98,7 +98,7 @@ public class DoubleRatchet {
     public func decrypt(message: Message, associatedData: Bytes? = nil) throws -> Bytes {
         logger.debug("Decrypting message with number \(message.header.messageNumber).")
         
-        if let cachedMessageKey = messageKeyCache.getMessageKey(messageNumber: message.header.messageNumber, publicKey: message.header.publicKey) {
+        if let cachedMessageKey = try messageKeyCache?.getMessageKey(messageNumber: message.header.messageNumber, publicKey: message.header.publicKey) {
             logger.debug("Use cached message key to decrypt message with number \(message.header.messageNumber) in receiving chain with public key \(fingerprint(publicKey: message.header.publicKey)).")
             return try decrypt(message: message, key: cachedMessageKey, associatedData: associatedData)
         }
@@ -142,7 +142,7 @@ public class DoubleRatchet {
         while receivedMessageNumber < nextMessageNumber {
             logger.debug("Skipping message number \(receivedMessageNumber) in receiving chain with public key \(fingerprint(publicKey: remotePublicKey)).")
             let skippedMessageKey = try receivingChain.nextMessageKey()
-            messageKeyCache.add(messageKey: skippedMessageKey, messageNumber: receivedMessageNumber, publicKey: remotePublicKey)
+            try messageKeyCache?.add(messageKey: skippedMessageKey, messageNumber: receivedMessageNumber, publicKey: remotePublicKey)
             receivedMessageNumber += 1
         }
     }
