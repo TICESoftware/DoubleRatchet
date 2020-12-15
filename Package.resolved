@@ -5,9 +5,9 @@
         "package": "HKDF",
         "repositoryURL": "https://github.com/TICESoftware/HKDF.git",
         "state": {
-          "branch": "linux",
-          "revision": "ed9f34b91d6837857cdf939326e7c0f2916a4be0",
-          "version": null
+          "branch": null,
+          "revision": "c0512a18f9486af535bac1befe3f7df753c5b206",
+          "version": "1.0.9"
         }
       },
       {
@@ -21,11 +21,11 @@
       },
       {
         "package": "Sodium",
-        "repositoryURL": "https://github.com/TICESoftware/swift-sodium.git",
+        "repositoryURL": "https://github.com/jedisct1/swift-sodium.git",
         "state": {
-          "branch": "linux",
-          "revision": "330cff0292618ac717df361d9341d83d98172ec6",
-          "version": null
+          "branch": null,
+          "revision": "4f9164a0a2c9a6a7ff53a2833d54a5c79c957342",
+          "version": "0.9.1"
         }
       }
     ]
