@@ -3,19 +3,19 @@
     "pins": [
       {
         "package": "Clibsodium",
-        "repositoryURL": "https://github.com/TICESoftware/Clibsodium",
+        "repositoryURL": "https://github.com/TICESoftware/Clibsodium.git",
         "state": {
-          "branch": "spmWorkaround",
+          "branch": null,
           "revision": "1299f1735480130410c1d277c5278b6100159a51",
-          "version": null
+          "version": "1.0.1"
         }
       },
       {
         "package": "HKDF",
         "repositoryURL": "https://github.com/TICESoftware/HKDF.git",
         "state": {
-          "branch": "develop",
-          "revision": "ccba9336bcfd28a6a8e5d12c342e98c2c618120d",
+          "branch": "explicitClibsodium",
+          "revision": "8137149293d8262f2f7d6c91f8e05e989a39d10d",
           "version": null
         }
       },
@@ -33,7 +33,7 @@
         "repositoryURL": "https://github.com/TICESoftware/swift-sodium.git",
         "state": {
           "branch": "spmWorkaround",
-          "revision": "30191738f332423382c7048fdd716f62e0c5dd54",
+          "revision": "f2b32566f9b9f4f3a534e125a9151cbc9639a48d",
           "version": null
         }
       }

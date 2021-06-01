@@ -11,16 +11,17 @@ let package = Package(
             targets: ["DoubleRatchet"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/TICESoftware/swift-sodium.git", from: "0.9.2"),
-        .package(url: "https://github.com/TICESoftware/HKDF.git", from: "1.0.10"),
+        .package(url: "https://github.com/TICESoftware/swift-sodium.git", .branch("spmWorkaround")),
+        .package(url: "https://github.com/TICESoftware/Clibsodium.git", from: "1.0.1"),
+        .package(url: "https://github.com/TICESoftware/HKDF.git",  .branch("explicitClibsodium")),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
     ],
     targets: [
         .target(
             name: "DoubleRatchet",
-            dependencies: ["Sodium", "HKDF", "Logging"]),
+            dependencies: ["Sodium", "HKDF", "Logging", "Clibsodium"]),
         .testTarget(
             name: "DoubleRatchetTests",
-            dependencies: ["DoubleRatchet", "Sodium"]),
+            dependencies: ["DoubleRatchet", "Sodium", "Clibsodium"]),
     ]
 )
