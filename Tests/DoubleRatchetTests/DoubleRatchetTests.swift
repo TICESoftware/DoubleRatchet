@@ -6,11 +6,39 @@ import XCTest
 import Sodium
 @testable import DoubleRatchet
 
+class SimpleMessageKeyCache: MessageKeyCache {
+    struct Key: Codable, Hashable {
+        let messageNumber: Int
+        let publicKey: Data
+    }
+    
+    var cache: [Key: MessageKey] = [:]
+    
+    func add(messageKey: MessageKey, messageNumber: Int, publicKey: PublicKey) throws {
+        let publicKeyData = Data(publicKey)
+        let key = Key(messageNumber: messageNumber, publicKey: publicKeyData)
+        cache[key] = messageKey
+    }
+    
+    func getMessageKey(messageNumber: Int, publicKey: PublicKey) throws -> MessageKey? {
+        let publicKeyData = Data(publicKey)
+        let key = Key(messageNumber: messageNumber, publicKey: publicKeyData)
+        return cache[key]
+    }
+    
+    func remove(publicKey: PublicKey, messageNumber: Int) throws {
+        let publicKeyData = Data(publicKey)
+        let key = Key(messageNumber: messageNumber, publicKey: publicKeyData)
+        cache[key] = nil
+    }
+}
+
 final class DoubleRatchetTests: XCTestCase {
 
     let sodium = Sodium()
     let sharedSecret = Sodium().utils.hex2bin("00 11 22 33 44 55 66 77 88 99 AA BB CC DD EE FF 00 11 22 33 44 55 66 77 88 99 AA BB CC DD EE FF", ignore: " ")!
 
+    var messageKeyCache = SimpleMessageKeyCache()
     var alice: DoubleRatchet!
     var bob: DoubleRatchet!
     let info = "DoubleRatchetTest"
@@ -18,8 +46,8 @@ final class DoubleRatchetTests: XCTestCase {
     override func setUp() {
         super.setUp()
 
-        bob = try! DoubleRatchet(keyPair: nil, remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 20, info: info)
-        alice = try! DoubleRatchet(keyPair: nil, remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 20, info: info)
+        bob = try! DoubleRatchet(keyPair: nil, remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 20, info: info, messageKeyCache: messageKeyCache)
+        alice = try! DoubleRatchet(keyPair: nil, remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, info: info, messageKeyCache: messageKeyCache)
     }
 
     func testRatchetSteps() throws {
@@ -99,8 +127,8 @@ final class DoubleRatchetTests: XCTestCase {
     }
 
     func testExceedMaxSkipMessages() throws {
-            bob = try DoubleRatchet(keyPair: nil, remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 1, maxCache: 2, info: info)
-            alice = try DoubleRatchet(keyPair: nil, remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 1, maxCache: 2, info: info)
+            bob = try DoubleRatchet(keyPair: nil, remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 1, info: info, messageKeyCache: messageKeyCache)
+            alice = try DoubleRatchet(keyPair: nil, remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 1, info: info, messageKeyCache: messageKeyCache)
 
             for _ in 0...1 {
                 _ = try alice.encrypt(plaintext: "Message".bytes)
@@ -119,34 +147,6 @@ final class DoubleRatchetTests: XCTestCase {
         }
     }
 
-    func testExceedMaxCacheMessageKeys() throws {
-        bob = try DoubleRatchet(keyPair: nil, remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 1, info: info)
-        alice = try DoubleRatchet(keyPair: nil, remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 1, info: info)
-
-        var delayedMessages: [Message] = []
-
-        for i in 0...2 {
-            let message = "aliceToBob\(i)"
-            let encryptedMessage = try alice.encrypt(plaintext: message.bytes)
-            delayedMessages.append(encryptedMessage)
-        }
-
-        for i in (1...2).reversed() {
-            let plaintext = try bob.decrypt(message: delayedMessages[i])
-            XCTAssertEqual(plaintext, "aliceToBob\(i)".bytes)
-        }
-
-        do {
-            _ = try bob.decrypt(message: delayedMessages[0])
-            XCTFail()
-        } catch {
-            guard case DRError.discardOldMessage = error else {
-                XCTFail(error.localizedDescription)
-                return
-            }
-        }
-    }
-
     func testEncryptAssociatedData() throws {
         let message = "aliceToBob".bytes
         let associatedData = "AD".bytes
@@ -156,16 +156,16 @@ final class DoubleRatchetTests: XCTestCase {
     }
 
     func testReinitializeSession() throws {
-        bob = try DoubleRatchet(keyPair: nil, remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 1, info: info)
-        alice = try DoubleRatchet(keyPair: nil, remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, maxCache: 1, info: info)
+        bob = try DoubleRatchet(keyPair: nil, remotePublicKey: nil, sharedSecret: sharedSecret, maxSkip: 20, info: info, messageKeyCache: nil)
+        alice = try DoubleRatchet(keyPair: nil, remotePublicKey: bob.publicKey, sharedSecret: sharedSecret, maxSkip: 20, info: info, messageKeyCache: nil)
 
         let message = "aliceToBob"
         let encryptedMessage = try alice.encrypt(plaintext: message.bytes)
         let plaintext = try bob.decrypt(message: encryptedMessage)
         XCTAssertEqual(plaintext.utf8String!, message)
 
-        bob = DoubleRatchet(sessionState: bob.sessionState)
-        alice = DoubleRatchet(sessionState: alice.sessionState)
+        bob = DoubleRatchet(sessionState: bob.sessionState, messageKeyCache: nil)
+        alice = DoubleRatchet(sessionState: alice.sessionState, messageKeyCache: nil)
 
         let messageAliceToBob = "aliceToBob"
         let encryptedMessageAliceToBob = try alice.encrypt(plaintext: messageAliceToBob.bytes)
@@ -193,7 +193,6 @@ final class DoubleRatchetTests: XCTestCase {
         ("testLostMessages", testLostMessages),
         ("testLostMessagesAndRatchetStep", testLostMessagesAndRatchetStep),
         ("testExceedMaxSkipMessages", testExceedMaxSkipMessages),
-        ("testExceedMaxCacheMessageKeys", testExceedMaxCacheMessageKeys),
         ("testEncryptAssociatedData", testEncryptAssociatedData),
         ("testReinitializeSession", testReinitializeSession),
         ("testMessageHeaderEncoding", testMessageHeaderEncoding),
